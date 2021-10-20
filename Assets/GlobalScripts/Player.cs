@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using TMPro;
 
+// Gère les interactions du joueur avec les objets
+// Note : Ne gère pas les déplacements du joueur.
 public class Player : MonoBehaviour
 {
     // Variables d'interactions
@@ -11,8 +13,8 @@ public class Player : MonoBehaviour
     private GameObject objectInteractingWith; // représente l'objet avec lequel on interagit
 
     // Variables pour gérer le déplacement d'objets
-    private GameObject pickedObject; // l'objet tenu en main par le joueur
-    private GameObject pickedObjectGhost; // prévisualisation de l'objet ramassé
+    private Pickable pickedObject; // l'objet tenu en main par le joueur
+    private GhostObject pickedObjectGhost; // prévisualisation de l'objet ramassé
     public float dropDistance = 3.5f;
 
     public GameObject heldCube;
@@ -38,10 +40,10 @@ public class Player : MonoBehaviour
                         voir doc : https://docs.unity3d.com/ScriptReference/Input.html
                     - Interagir avec l'objet
                     - Gérer le ramassage des objets "Pickable"
-                        - Récupérer l'objet "Ghost" (la prévisualisation) et le spawn
+                        - Récupérer l'objet "Ghost" (la prévisualisation) et le spawn : https://docs.unity3d.com/Manual/InstantiatingPrefabs.html
                         - Faire tenir au joueur le bon objet en main (déjà paramétré, il reste à activer la bonne visualisation)
                             - Pour cela, compléter la fonction setHeldObjectActivity()
-                        - mettre à jour la variable pickedObject
+                        - mettre à jour les variables pickedObject et pickedObjectGhost
             */
             if(Input.GetButtonDown("Interact"))
             {
@@ -51,7 +53,9 @@ public class Player : MonoBehaviour
                     Pickable pickableObject = objectInteractingWith.GetComponent<Pickable>();
                     if(pickableObject != null)
                     {
+                        pickedObject = pickableObject;
                         pickedObjectGhost = pickableObject.getGhostObject();
+                        pickedObjectGhost = Instantiate(pickedObjectGhost);
                         setHeldObjectActivity(true, pickableObject.objectName);
                     }
                 }
@@ -62,20 +66,77 @@ public class Player : MonoBehaviour
             Poser les objets (les "Pickable")
             ToDo 3
                 - Lancer un Raycast et vérifier qu'on touche le sol (il y a un tag Floor)
+                    - Piège : il faut éviter que le raycast touche le ghost en lui-même. 
+                        Voir doc des layermask : https://docs.unity3d.com/Manual/Layers.html 
+                        (le Ghost est sur le layer 11)
                 - Téléporter l'objet ghost à la position du raycast
-                - Si l'objet Ghost a des collisions avec d'autres objets, le cacher, sinon l'afficher.
+                - Si l'objet Ghost a des collisions avec d'autres objets, le cacher, sinon l'afficher (voir la classe GhostObject)
+
                 - Permettre au joueur de poser l'objet si la position est correcte.
-                Note : l'objet Ghost a un Mesh Collider avec la case Trigger de cochée
+                    - penser à détruire le Ghost et à remettre les bonnes variables à zéro
+
+            ToDo 4 : 
+                - La même chose mais placer les objets sur les cubes et boutons.
             */
             if(pickedObject)
             {
+                PickablePlacementArea ppa = null;
+
                 Vector3 fwd = transform.TransformDirection(Vector3.forward);
                 RaycastHit hit;
 
-                if (Physics.Raycast(transform.position, fwd, out hit, dropDistance))
+                int layerMask = 1 << 11;
+                layerMask = ~layerMask;
+
+                if (Physics.Raycast(transform.position, fwd, out hit, dropDistance, layerMask))
                 {
-                    
+
+                    // On touche un CubePlacementArea
+                    ppa = hit.collider.gameObject.GetComponent(typeof(PickablePlacementArea)) as PickablePlacementArea;
+                    if(ppa && ppa.canPlace())
+                    {
+                        pickedObjectGhost.transform.position = ppa.getPlacementPosition();
+                        pickedObjectGhost.GetComponent<MeshRenderer>().enabled = true;
+                    }
+
+                    // On touche le sol.
+                    else if( hit.transform.tag == "Floor")
+                    {
+                        pickedObjectGhost.transform.position = hit.point;
+                        if(!pickedObjectGhost.isColliding())
+                        {
+                            pickedObjectGhost.GetComponent<MeshRenderer>().enabled = true;
+                        }
+                        else
+                        {
+                            pickedObjectGhost.GetComponent<MeshRenderer>().enabled = false;
+                        }
+                    }
                 }
+                else
+                {
+                    pickedObjectGhost.GetComponent<MeshRenderer>().enabled = false;
+                } 
+
+                // si le ghost est visible, on peut placer le cube
+                if(Input.GetButtonDown("Interact"))
+                {
+                    if(pickedObjectGhost.GetComponent<MeshRenderer>().enabled)
+                    {
+                        if(ppa != null)
+                        {
+                            ppa.place(pickedObject);
+                        }
+
+                        pickedObject.transform.position = pickedObjectGhost.transform.position;
+                        pickedObject.drop();
+                        setHeldObjectActivity(false, pickedObject.objectName);
+                        pickedObject = null;
+                        Destroy(pickedObjectGhost.gameObject);
+                    }
+                }
+                
+
             }
         }
 
@@ -98,12 +159,14 @@ public class Player : MonoBehaviour
         */
         Vector3 fwd = transform.TransformDirection(Vector3.forward);
         RaycastHit hit;
+        int layerMask = 1 << 12;
+        layerMask = ~layerMask;
 
-        if (Physics.Raycast(transform.position, fwd, out hit, interactionDistance))
+        if (Physics.Raycast(transform.position, fwd, out hit, interactionDistance, layerMask))
         {    
             Interactive interactiveObject = hit.collider.gameObject.GetComponent(typeof(Interactive)) as Interactive;
 
-            if(interactiveObject  != null)
+            if(interactiveObject  != null && interactiveObject.canInteractWith())
             {
                 showInteractionMessage(true, interactiveObject.getInteractionMessage());
                 objectInteractingWith = hit.collider.gameObject;

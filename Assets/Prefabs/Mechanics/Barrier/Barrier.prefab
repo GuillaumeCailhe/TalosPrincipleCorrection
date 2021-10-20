@@ -12,6 +12,7 @@ GameObject:
   - component: {fileID: 92319618859164996}
   - component: {fileID: 92319618859165019}
   - component: {fileID: 4826055017468923277}
+  - component: {fileID: 3602694975622930359}
   m_Layer: 0
   m_Name: Barrier
   m_TagString: Jammable
@@ -96,3 +97,16 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 10.14, y: 0.13, z: 10}
   m_Center: {x: 0, y: 0, z: 0}
+--- !u!114 &3602694975622930359
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 92319618859165017}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adf996fd93f5189489ddb27fa01e9d52, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  isActivatedByDefault: 1

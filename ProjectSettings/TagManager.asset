@@ -7,6 +7,7 @@ TagManager:
   - CinemachineTarget
   - Jammable
   - Floor
+  - Cube
   layers:
   - Default
   - TransparentFX
@@ -19,8 +20,8 @@ TagManager:
   - PostProcessing
   - Not in Reflection
   - PickedObjects
-  - 
-  - 
+  - Ghost
+  - PickablePlacementArea
   - 
   - 
   - 
